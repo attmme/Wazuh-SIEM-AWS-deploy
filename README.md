@@ -1,6 +1,32 @@
-# Wazuh SIEM deployment with AWS 
+# Wazuh SIEM deployment with AWS
 
 &nbsp;
+
+## INDEX
+
+- [ℹ️ About this project](#ℹ%EF%B8%8F-about-this-project)
+
+- [🤔💭 What is Wazuh](#-what-is-wazuh)
+
+- [💰 Cost Estimate & Instance Selection ](#-cost-estimate--instance-selection)
+
+- [🧾 Requisites](#-requisites)
+
+- [🛠️ Installation & Setup](#%EF%B8%8F-installation--setup)
+
+    - [📦 Setting up AWS](#-setting-up-aws)
+
+    - [🚀 Setting up Wazuh indexer](#-setting-up-wazuh-indexer)
+
+    - [🚀 Setting up Wazuh server](#-setting-up-wazuh-server)
+ 
+    - [🚀 Setting up Wazuh dashboard](#-setting-up-wazuh-dashboard)
+
+---
+
+&nbsp;
+
+---
 
 # ℹ️ About this project
 This project documents a complete deployment of **Wazuh** on separated machines for the indexer, server, and dashboard on **AWS**, following a structure closer to **production environments**. The goal is to have a reusable setup that can serve as a foundation for future projects related to SOC operations.
@@ -99,13 +125,34 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
 
     ![Step 2](assets/0_setting_up/1_vpc/2.png)
 
-3. Choose a name tag (recommended to find it between different VPC) and select an IP range, in this case **10.10.10.0/24**.
+3. Choose a name (recommended to find it between different VPC) and select an IP range, in this case **10.10.10.0/24**.
 
     ![Step 3](assets/0_setting_up/1_vpc/3.png)
 
-4. Finally, write again the VPC name and **Create VPC**.
+4. Check both options for the DNS hostname and resolution and **Create VPC**.
 
     ![Step 4](assets/0_setting_up/1_vpc/4.png)
+
+5. Then, inside of Internet gateways, create a new one.
+
+    ![Step 4](assets/0_setting_up/1_vpc/5.png)
+   
+6. Inside of the new internet gateway, select the option to **attach to VPC**.
+
+    ![Step 4](assets/0_setting_up/1_vpc/6.png)
+
+7. Then, select the VPC we previously create and attach it.
+
+   ![Step 4](assets/0_setting_up/1_vpc/7.png)
+
+8. Enter again to the VPC, and under the resource map, open the route table.
+
+   ![Step 4](assets/0_setting_up/1_vpc/8.png)
+
+9. Edit the routes and add a new one to use the **wazuh-gateway** and save the changes.
+
+   ![Step 4](assets/0_setting_up/1_vpc/9.png)
+   ![Step 4](assets/0_setting_up/1_vpc/10.png)
 
 
 ### 2️⃣ Subnet
@@ -177,6 +224,96 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
 &nbsp;
 
 ## 🚀 Setting up Wazuh indexer
+
+### 1️⃣ EC2 instance
+
+1. Choose a name for the instance.
+
+    ![Step 1](assets/1_wazuh_indexer/aws/1.png)
+   
+3. Select the last Ubuntu Server.
+
+   ![Step 2](assets/1_wazuh_indexer/aws/2.png)
+
+5. Change the instance type to _t3.medium_.
+
+    ![Step 3](assets/1_wazuh_indexer/aws/3.png)
+
+7. Create a new key with **RSA** pair type and **PEM** format.
+
+    ![Step 4_1](assets/1_wazuh_indexer/aws/4.png)
+    ![Step 4_2](assets/1_wazuh_indexer/aws/5.png)
+    ![Step 4_3](assets/1_wazuh_indexer/aws/6.png)
+   
+9. Edit the network settings and put the configuration we created during the **Setting up AWS**. 
+
+    ![Step 5_1](assets/1_wazuh_indexer/aws/7.png)
+    ![Step 5_1](assets/1_wazuh_indexer/aws/8.png)
+
+11. Choose the disk capacity.
+
+     ![Step 6](assets/1_wazuh_indexer/aws/9.png)
+
+13. And launch the instance.
+  
+    ![Step 7](assets/1_wazuh_indexer/aws/10.png)
+
+
+### 2️⃣ Connection and basic configuration
+1. Give the correct permissions to your pem file:
+
+   `$ chmod 0600 Wazuh_PEM.pem`
+
+3. Connect via SSH to your AWS instance (indexer).
+
+   `$ ssh -i Wazuh_PEM.pem ubuntu@<YOUR_AWS_PUBLIC_DNS>`
+
+5. Update and install dependencies.
+
+   `$ sudo apt update && sudo apt upgrade -y`
+
+7. 📣 This is an optional step I will do in all the instances, only to make the steps easier to follow. To apply the changes, you need to exit and ssh again to the machine.
+
+   `$ sudo hostnamectl set-hostname wazuh-indexer`
+
+
+### 3️⃣ Initial Wazuh configuration
+
+1. Download the Wazuh installation assistant and the configuration file. You can skip the second curl and copy directly the code from the step 2.
+
+    ```
+    $ curl -sO https://packages.wazuh.com/4.12/wazuh-install.sh
+    $ curl -sO https://packages.wazuh.com/4.12/config.yml
+    ```
+    
+    ![Step 1](assets/1_wazuh_indexer/indexer/1.png)
+
+
+2. Modify the `config.yml` file according to your environment and save.
+    ```
+    nodes:
+      indexer:
+        - name: node-1
+          ip: "10.10.10.30"
+    
+      server:
+        - name: wazuh-server
+          ip: "10.10.10.31"
+    
+      dashboard:
+        - name: dashboard
+          ip: "10.10.10.32"
+    ```
+    
+    ![Step 2](assets/1_wazuh_indexer/indexer/2.png)
+
+
+3. Run the `wazuh-install.sh` as admin.
+
+    `$ sudo bash wazuh-install.sh --generate-config-files`
+   
+    ![Step 3](assets/1_wazuh_indexer/indexer/3.png)
+
 
 &nbsp;
 
