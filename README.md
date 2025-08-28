@@ -29,7 +29,7 @@
 ---
 
 # ℹ️ About this project
-This project documents a complete deployment of **Wazuh** on separated machines for the indexer, server, and dashboard on **AWS**, following a structure closer to **production environments**. The goal is to have a reusable setup that can serve as a foundation for future projects related to SOC operations.
+This project documents a complete deployment of **Wazuh** on separated machines for the indexer, server, and dashboard on **AWS**. The goal is to have a reusable setup that can serve as a foundation for future projects related to SOC operations.
 
 **❗ Please note:**
 - I am not an expert, so there might be significant mistakes. If you spot any, I would greatly appreciate your feedback.
@@ -195,31 +195,6 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
 6. Save the changes and check that everything is correct.
 
     ![Step 6](assets/0_setting_up/3_security_group/5.png)
-   
-   
-###  4️⃣ Network interfaces
-
-1. Inside of the AWS EC2 - _Instances_ page, in he left column, select **Network Interfaces** option (inside _Network & Security_).
-
-    ![Step 1](assets/0_setting_up/4_network_interfaces/1.png)
-
-2. Then, **Create network interface**.
-
-    ![Step 2](assets/0_setting_up/4_network_interfaces/2.png)
-
-3. Choose a name (_indexer, server and dashboard_), select the subnet created previously, and choose an IP inside the range (_30, 31 and 32_).
-
-    ![Step 3_1](assets/0_setting_up/4_network_interfaces/3.png)
-    ![Step 3_2](assets/0_setting_up/4_network_interfaces/5.png)
-    ![Step 3_3](assets/0_setting_up/4_network_interfaces/6.png)
-
-5. Select the WazuhSecurityGroup created previously and **Create network intercace**.
-
-    ![Step 5](assets/0_setting_up/4_network_interfaces/4.png)
-
-6. Finally, check that each network interface has its own private IP, inside the defined range on the VPC.
-
-    ![Step 6](assets/0_setting_up/4_network_interfaces/7.png)
 
 &nbsp;
 
@@ -248,13 +223,14 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
 9. Edit the network settings and put the configuration we created during the **Setting up AWS**. 
 
     ![Step 5_1](assets/1_wazuh_indexer/aws/7.png)
-    ![Step 5_1](assets/1_wazuh_indexer/aws/8.png)
-
+    ![Step 5_2](assets/1_wazuh_indexer/aws/8.png)
+    ![Step 5_3](assets/1_wazuh_indexer/aws/8_2.png)
+   
 11. Choose the disk capacity.
 
      ![Step 6](assets/1_wazuh_indexer/aws/9.png)
 
-13. And launch the instance.
+13. Launch the instance.
   
     ![Step 7](assets/1_wazuh_indexer/aws/10.png)
 
@@ -279,7 +255,8 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
 
 ### 3️⃣ Initial Wazuh configuration
 
-1. Download the Wazuh installation assistant and the configuration file. You can skip the second curl and copy directly the code from the step 2.
+1. Download the Wazuh installation assistant and the configuration file.
+You can skip the second curl and copy directly the code from **step 2**.
 
     ```
     $ curl -sO https://packages.wazuh.com/4.12/wazuh-install.sh
@@ -289,19 +266,19 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
     ![Step 1](assets/1_wazuh_indexer/indexer/1.png)
 
 
-2. Modify the `config.yml` file according to your environment and save.
+2. Modify the `config.yml` file according to your environment and save (or create a new one if you skipped the downloading).
     ```
     nodes:
       indexer:
-        - name: node-1
+        - name: wazuh-indexer-1
           ip: "10.10.10.30"
-    
+
       server:
         - name: wazuh-server
           ip: "10.10.10.31"
-    
+
       dashboard:
-        - name: dashboard
+        - name: wazuh-dashboard
           ip: "10.10.10.32"
     ```
     
@@ -314,6 +291,53 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
    
     ![Step 3](assets/1_wazuh_indexer/indexer/3.png)
 
+
+4. Later, we will copy the `wazuh-install-files.tar` to the different instances. If you have multiple indexes, it will also be copied on them.
+
+    `$ sudo chmod 744 wazuh-install-files.tar`
+
+
+### 4️⃣ Wazuh indexer nodes installation
+
+1. Using the previously downloaded `wazuh-install.sh`, add the name of the indexer given in the `config.yml` file and execute it. You will have to repeat this step for each Wazuh indexer node in your cluster, replacing the `wazuh-indexer-1` parameter for the according one. This can a few minutes.
+
+   `$ sudo bash wazuh-install.sh --wazuh-indexer wazuh-indexer-1`
+
+    ![Step 1](assets/1_wazuh_indexer/indexer/4.png)
+
+
+### 5️⃣ Cluster initialization
+   
+1. Run again the installer, but changing the parameter to `--start-cluster`.
+
+   `$ sudo bash wazuh-install.sh --start-cluster`
+
+    ![Step 1](assets/1_wazuh_indexer/indexer/5.png)
+
+2. To check if everything was correctly installed, firstly get the admin password.
+
+    `$ tar -axf wazuh-install-files.tar wazuh-install-files/wazuh-passwords.txt -O | grep -P "\'admin\'" -A 1` 
+
+    ![Step 2](assets/1_wazuh_indexer/indexer/6.png)
+
+3. Copy it, and replace the placeholders from the next command with your **admin account password** and the **index private IP**. You should have a similar output as shown in the image.
+
+    `curl -k -u admin:<ADMIN_PASSWORD> https://<WAZUH_INDEXER_IP>:9200`
+   
+    ![Step 3](assets/1_wazuh_indexer/indexer/7.png)
+
+4. Then, check the cluster, replacing the same placeholders as the previous step. You should have a similar output as shown in the image.
+
+    `curl -k -u admin:<ADMIN_PASSWORD> https://<WAZUH_INDEXER_IP>:9200/_cat/nodes?v`
+
+    ![Step 3](assets/1_wazuh_indexer/indexer/8.png)
+
+5. Finally, it is recommended to disable Wazuh automatic updates. This way, you will avoid future problems with some update breaking your environment.
+
+```
+$ sudo sed -i "s/^deb /#deb /" /etc/apt/sources.list.d/wazuh.list
+$ sudo apt update
+```
 
 &nbsp;
 
