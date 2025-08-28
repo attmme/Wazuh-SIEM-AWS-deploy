@@ -491,31 +491,31 @@ You can skip the second curl and copy directly the code from **step 2**.
 
     `$ sudo bash wazuh-install.sh --wazuh-dashboard wazuh-dashboard`
 
-    ![Step 2](assets/2_wazuh_dashboard/dashboard/2.png)
+    ![Step 2](assets/3_wazuh_dashboard/dashboard/2.png)
 
 3. To make it visible from outside (skip this if you plan to use a VPN, which is a highly recommended option) we will edit the configuration file and change the _server_host_ line for `0.0.0.0`.
 
     `$ sudo nano /etc/wazuh-dashboard/opensearch_dashboards.yml`
    
-    ![Step 3](assets/2_wazuh_dashboard/dashboard/3.png)
+    ![Step 3](assets/3_wazuh_dashboard/dashboard/3.png)
 
 
 4. Restart the dashboard and enter to the Wazuh dashboard (`https://<YOUR_DASHBOARD_PUBLIC_DNS>`) using your browser.
     `$ sudo systemctl restart wazuh-dashboard`
 
-    ![Step 4](assets/2_wazuh_dashboard/dashboard/4.png)
+    ![Step 4](assets/3_wazuh_dashboard/dashboard/4.png)
 
    
 5. To get the login credentials, we will use the following command.
 
     `$ tar -O -xvf wazuh-install-files.tar wazuh-install-files/wazuh-passwords.txt`
 
-    ![Step 5](assets/2_wazuh_dashboard/dashboard/5.png)
+    ![Step 5](assets/3_wazuh_dashboard/dashboard/5.png)
 
 
 6. Then, login to Wazuh dashboard.
 
-    ![Step 6](assets/2_wazuh_dashboard/dashboard/6.png)
+    ![Step 6](assets/3_wazuh_dashboard/dashboard/6.png)
    
 
 7. Finally, it is recommended to disable Wazuh automatic updates. This way, you will avoid future problems with some update breaking your environment.
