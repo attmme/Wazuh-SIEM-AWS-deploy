@@ -22,6 +22,9 @@
  
     - [🚀 Setting up Wazuh dashboard](#-setting-up-wazuh-dashboard)
 
+- [👋 Personal notes](#%EF%B8%8F-installation--setup)
+
+
 ---
 
 &nbsp;
@@ -194,7 +197,7 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
 
 6. Save the changes and check that everything is correct.
 
-    ![Step 6](assets/0_setting_up/3_security_group/5.png)
+    ![Step 6](assets/0_setting_up/3_security_group/6.png)
 
 &nbsp;
 
@@ -206,31 +209,31 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
 
     ![Step 1](assets/1_wazuh_indexer/aws/1.png)
    
-3. Select the last Ubuntu Server.
+2. Select the last Ubuntu Server.
 
    ![Step 2](assets/1_wazuh_indexer/aws/2.png)
 
-5. Change the instance type to _t3.medium_.
+3. Change the instance type to _t3.medium_.
 
     ![Step 3](assets/1_wazuh_indexer/aws/3.png)
 
-7. Create a new key with **RSA** pair type and **PEM** format.
+4. Create a new key with **RSA** pair type and **PEM** format.
 
     ![Step 4_1](assets/1_wazuh_indexer/aws/4.png)
     ![Step 4_2](assets/1_wazuh_indexer/aws/5.png)
     ![Step 4_3](assets/1_wazuh_indexer/aws/6.png)
    
-9. Edit the network settings and put the configuration we created during the **Setting up AWS**. 
+5. Edit the network settings and put the configuration we created during the **Setting up AWS**. 
 
     ![Step 5_1](assets/1_wazuh_indexer/aws/7.png)
     ![Step 5_2](assets/1_wazuh_indexer/aws/8.png)
     ![Step 5_3](assets/1_wazuh_indexer/aws/8_2.png)
    
-11. Choose the disk capacity.
+6. Choose the disk capacity.
 
      ![Step 6](assets/1_wazuh_indexer/aws/9.png)
 
-13. Launch the instance.
+7. Launch the instance.
   
     ![Step 7](assets/1_wazuh_indexer/aws/10.png)
 
@@ -240,15 +243,15 @@ Estimated **~20 USD/month** across all components (gp3 SSD volumes: 50–200 GB,
 
    `$ chmod 0600 Wazuh_PEM.pem`
 
-3. Connect via SSH to your AWS instance (indexer).
+2. Connect via SSH to your AWS instance (indexer).
 
-   `$ ssh -i Wazuh_PEM.pem ubuntu@<YOUR_AWS_PUBLIC_DNS>`
+   `$ ssh -i Wazuh_PEM.pem ubuntu@<YOUR_INDEXER_PUBLIC_DNS>`
 
-5. Update and install dependencies.
+3. Update and install dependencies.
 
    `$ sudo apt update && sudo apt upgrade -y`
 
-7. 📣 This is an optional step I will do in all the instances, only to make the steps easier to follow. To apply the changes, you need to exit and ssh again to the machine.
+4. 📣 This is an optional step I will do in all the instances, only to make the steps easier to follow. To apply the changes, you need to exit and ssh again to the machine.
 
    `$ sudo hostnamectl set-hostname wazuh-indexer`
 
@@ -322,29 +325,212 @@ You can skip the second curl and copy directly the code from **step 2**.
 
 3. Copy it, and replace the placeholders from the next command with your **admin account password** and the **index private IP**. You should have a similar output as shown in the image.
 
-    `curl -k -u admin:<ADMIN_PASSWORD> https://<WAZUH_INDEXER_IP>:9200`
+    `$ curl -k -u admin:<ADMIN_PASSWORD> https://<WAZUH_INDEXER_IP>:9200`
    
     ![Step 3](assets/1_wazuh_indexer/indexer/7.png)
 
 4. Then, check the cluster, replacing the same placeholders as the previous step. You should have a similar output as shown in the image.
 
-    `curl -k -u admin:<ADMIN_PASSWORD> https://<WAZUH_INDEXER_IP>:9200/_cat/nodes?v`
+    `$ curl -k -u admin:<ADMIN_PASSWORD> https://<WAZUH_INDEXER_IP>:9200/_cat/nodes?v`
 
-    ![Step 3](assets/1_wazuh_indexer/indexer/8.png)
+    ![Step 4](assets/1_wazuh_indexer/indexer/8.png)
 
 5. Finally, it is recommended to disable Wazuh automatic updates. This way, you will avoid future problems with some update breaking your environment.
 
-```
-$ sudo sed -i "s/^deb /#deb /" /etc/apt/sources.list.d/wazuh.list
-$ sudo apt update
-```
+    ```
+    $ sudo sed -i "s/^deb /#deb /" /etc/apt/sources.list.d/wazuh.list
+    $ sudo apt update
+    ```
 
 &nbsp;
 
 ## 🚀 Setting up Wazuh server
 
+### 1️⃣ EC2 instance
+
+1. Choose a name for the instance.
+
+    ![Step 1](assets/2_wazuh_server/aws/1.png)
+   
+3. Select the last Ubuntu Server.
+
+   ![Step 2](assets/1_wazuh_indexer/aws/2.png)
+
+3. Change the instance type to _t3.medium_.
+
+    ![Step 3](assets/1_wazuh_indexer/aws/3.png)
+
+4. Choose the key.
+
+    ![Step 4](assets/1_wazuh_indexer/aws/6.png)
+   
+5. Edit the network settings and put the configuration we created during the **Setting up AWS**. 
+
+    ![Step 5_1](assets/1_wazuh_indexer/aws/7.png)
+    ![Step 5_2](assets/1_wazuh_indexer/aws/8.png)
+    ![Step 5_3](assets/2_wazuh_server/aws/8_2.png)
+   
+6. Choose the disk capacity.
+
+     ![Step 6](assets/1_wazuh_indexer/aws/9.png)
+
+7. Launch the instance.
+  
+    ![Step 7](assets/1_wazuh_indexer/aws/10.png)
+
+
+### 2️⃣ Connection and basic configuration
+
+1. From the **main host** (where the Wazuh_PEM.pem file is saved), we will copy the pem file to the indexer machine.
+
+   `$ scp -i Wazuh_PEM.pem Wazuh_PEM.pem ubuntu@<YOUR_INDEXER_PUBLIC_DNS>:/home/ubuntu/`
+
+2. From the **wazuh-index instance**, we will copy the install file that we generated, to the server machine.
+
+    `$ scp -i Wazuh_PEM.pem wazuh-install-files.tar ubuntu@<YOUR_SERVER_PRIVATE_DNS>:/home/ubuntu/`
+
+    ![Step 1](assets/2_wazuh_server/server/1.png)
+
+3. Connect via SSH to your AWS instance (server).
+
+    `$ ssh -i Wazuh_PEM.pem ubuntu@<YOUR_SERVER_PUBLIC_DNS>`
+
+4. Update and install dependencies.
+
+   `$ sudo apt update && sudo apt upgrade -y`
+
+5. 📣 This is an optional step I will do in all the instances, only to make the steps easier to follow. To apply the changes, you need to exit and ssh again to the machine.
+
+   `$ sudo hostnamectl set-hostname wazuh-server`
+
+
+### 3️⃣ Wazuh server configuration
+
+1. Download the Wazuh installation assistant file.
+
+    `$ curl -sO https://packages.wazuh.com/4.12/wazuh-install.sh`
+
+2. Run the Wazuh installation assistant with the option `--wazuh-server` and the node name (the same used in the `config.yml`) to install the Wazuh server.
+
+    `$ sudo bash wazuh-install.sh --wazuh-server wazuh-server`
+
+    ![Step 2](assets/2_wazuh_server/server/2.png)
+
+3. Finally, it is recommended to disable Wazuh automatic updates. This way, you will avoid future problems with some update breaking your environment.
+
+    ```
+    $ sudo sed -i "s/^deb /#deb /" /etc/apt/sources.list.d/wazuh.list
+    $ sudo apt update
+    ```
+
 &nbsp;
 
 ## 🚀 Setting up Wazuh dashboard
 
+### 1️⃣ EC2 instance
 
+1. Choose a name for the instance.
+
+    ![Step 1](assets/3_wazuh_dashboard/aws/1.png)
+   
+3. Select the last Ubuntu Server.
+
+   ![Step 2](assets/1_wazuh_indexer/aws/2.png)
+
+3. Change the instance type to _t3.medium_.
+
+    ![Step 3](assets/1_wazuh_indexer/aws/3.png)
+
+4. Choose the key.
+
+    ![Step 4](assets/1_wazuh_indexer/aws/6.png)
+   
+5. Edit the network settings and put the configuration we created during the **Setting up AWS**. 
+
+    ![Step 5_1](assets/1_wazuh_indexer/aws/7.png)
+    ![Step 5_2](assets/1_wazuh_indexer/aws/8.png)
+    ![Step 5_3](assets/3_wazuh_dashboard/aws/8_2.png)
+   
+6. Choose the disk capacity.
+
+     ![Step 6](assets/1_wazuh_indexer/aws/9.png)
+
+7. Launch the instance.
+  
+    ![Step 7](assets/1_wazuh_indexer/aws/10.png)
+
+
+### 2️⃣ Connection and basic configuration
+
+1. From the **wazuh-index instance**, we will copy the install file that we generated, to the server machine.
+
+    `$ scp -i Wazuh_PEM.pem wazuh-install-files.tar ubuntu@<YOUR_SERVER_PRIVATE_DNS>:/home/ubuntu/`
+
+    ![Step 1](assets/3_wazuh_dashboard/dashboard/1.png)
+
+3. Connect via SSH to your AWS instance (server).
+
+    `$ ssh -i Wazuh_PEM.pem ubuntu@<YOUR_SERVER_PUBLIC_DNS>`
+
+4. Update and install dependencies.
+
+   `$ sudo apt update && sudo apt upgrade -y`
+
+5. 📣 This is an optional step I will do in all the instances, only to make the steps easier to follow. To apply the changes, you need to exit and ssh again to the machine.
+
+   `$ sudo hostnamectl set-hostname wazuh-dashboard`
+
+
+### 3️⃣ Wazuh dashboard configuration
+
+1. Download the Wazuh installation assistant file.
+
+    `$ curl -sO https://packages.wazuh.com/4.12/wazuh-install.sh`
+
+2. Run the Wazuh installation assistant with the option `--wazuh-dashboard` and the node name (the same used in the `config.yml`) to install the Wazuh server.
+
+    `$ sudo bash wazuh-install.sh --wazuh-dashboard wazuh-dashboard`
+
+    ![Step 2](assets/2_wazuh_dashboard/dashboard/2.png)
+
+3. To make it visible from outside (skip this if you plan to use a VPN, which is a highly recommended option) we will edit the configuration file and change the _server_host_ line for `0.0.0.0`.
+
+    `$ sudo nano /etc/wazuh-dashboard/opensearch_dashboards.yml`
+   
+    ![Step 3](assets/2_wazuh_dashboard/dashboard/3.png)
+
+
+4. Restart the dashboard and enter to the Wazuh dashboard (`https://<YOUR_DASHBOARD_PUBLIC_DNS>`) using your browser.
+    `$ sudo systemctl restart wazuh-dashboard`
+
+    ![Step 4](assets/2_wazuh_dashboard/dashboard/4.png)
+
+   
+5. To get the login credentials, we will use the following command.
+
+    `$ tar -O -xvf wazuh-install-files.tar wazuh-install-files/wazuh-passwords.txt`
+
+    ![Step 5](assets/2_wazuh_dashboard/dashboard/5.png)
+
+
+6. Then, login to Wazuh dashboard.
+
+    ![Step 6](assets/2_wazuh_dashboard/dashboard/6.png)
+   
+
+7. Finally, it is recommended to disable Wazuh automatic updates. This way, you will avoid future problems with some update breaking your environment.
+
+    ```
+    $ sudo sed -i "s/^deb /#deb /" /etc/apt/sources.list.d/wazuh.list
+    $ sudo apt update
+    ```
+
+&nbsp;
+
+---
+
+&nbsp;
+
+# 👋 Personal notes
+
+And here ends the Wazuh configuration. I ran into many issues along the way, but it turned out to be a great learning experience. This setup is by no means optimized for security — there are still several defaults that should be changed and hardened. Still, it works as a functional starting point to get hands-on with Wazuh and better understand how the components fit together.
